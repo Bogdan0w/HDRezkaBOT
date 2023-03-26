@@ -37,10 +37,14 @@ def search(message):
                              .find('a').get('href')})
     if final_res:
         for note in final_res:
-            print(list(note.values()))
             inf = list(note.values())
             urlmovie = inf[3]
             rezka = HdRezkaApi(urlmovie)
+            if rezka.type == "video.tv_series":
+                seriesdata = rezka.getSeasons()
+                print(seriesdata[1])
+                
+                bot.send_message(message.chat.id, f''.format(message.from_user, bot.get_me()))
             finalurl = rezka.getStream('1', '1')('720p')
             bot.send_photo(message.chat.id, inf[2], f'<b><a href="{finalurl}">{inf[0]}</a></b>\n{inf[1]}'.format(message.from_user, bot.get_me()),
                            parse_mode='html')
