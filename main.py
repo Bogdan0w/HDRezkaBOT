@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import requests
 import telebot
 from HdRezkaApi import *
+from telebot import types
 
 headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36'}
 TOKEN = '6162235622:AAGkwkn6H8cCf7NQKaQfyO25r-7tI0RV3SI'
@@ -42,9 +43,19 @@ def search(message):
             rezka = HdRezkaApi(urlmovie)
             if rezka.type == "video.tv_series":
                 seriesdata = rezka.getSeasons()
-                print(seriesdata[1])
-                
-                bot.send_message(message.chat.id, f''.format(message.from_user, bot.get_me()))
+                print( rezka.getTranslations() )
+                print(seriesdata)
+                list_button_name = seriesdata[None]['seasons']
+                print(list_button_name)
+                latest_season = max(seriesdata[None]['seasons'], key=int)
+                buttons = []
+                for item in list_button_name:
+                    button = types.InlineKeyboardButton(text=item, callback_data=item)
+                    buttons.append(button)
+                keyboard = types.InlineKeyboardMarkup()
+                keyboard.add(*buttons)
+                bot.send_message(message.chat.id, f'В сериале {latest_season} сезонов'.format(message.from_user, bot.get_me()), reply_markup=keyboard)
+
             finalurl = rezka.getStream('1', '1')('720p')
             bot.send_photo(message.chat.id, inf[2], f'<b><a href="{finalurl}">{inf[0]}</a></b>\n{inf[1]}'.format(message.from_user, bot.get_me()),
                            parse_mode='html')
