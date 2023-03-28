@@ -3,6 +3,7 @@ import requests
 import telebot
 from HdRezkaApi import *
 from telebot import types
+import base64
 
 headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36'}
 TOKEN = '6162235622:AAGkwkn6H8cCf7NQKaQfyO25r-7tI0RV3SI'
@@ -22,7 +23,7 @@ def search(message):
     soup = BeautifulSoup(html, 'lxml')
     final_res = []
     for index, note in enumerate(soup.find_all('div', class_='b-content__inline_item')):
-        if index == 1:
+        if index == 3:
             break
         else:
             final_res.append({'name': soup.find_all('div', class_='b-content__inline_item')[index]
@@ -36,32 +37,65 @@ def search(message):
                               'link': soup.find_all('div', class_='b-content__inline_item')[index]
                              .find('div', class_='b-content__inline_item-cover')
                              .find('a').get('href')})
+
+    @bot.callback_query_handler(func=lambda call: True, prefix='Main')
+    def handle_callback(call):
+        if call.data == button_callback:
+            urlmovie = call.data
+            rezka = HdRezkaApi(urlmovie)        
+            if rezka.type == "video.tv_series":
+                if None in rezka.getTranslations():
+                    print("hello")
+                else:
+                    print("bye")
+            else:
+                if None in rezka.getTranslations():
+                    stream = rezka.getStream(1, 5)
+                    links = stream.videos
+                    def globallinks():
+                        global links
+                        
+                    keyboard = types.InlineKeyboardMarkup()
+                    for quality, link in links.items():
+                        button = types.InlineKeyboardButton(text=quality, callback_data=quality)
+                        keyboard.add(button)
+                    bot.send_message(call.message.chat.id, 'Выберите качество видео:', reply_markup=keyboard)
+                    print(quality)
+                else:
+                    bot.send_message(call.message.chat.id, "Ошибка: Не удалось получить ссылку на видео.")
+                    
+        elif call.data == quality:
+            quality = call.data
+            link = globallinks()
+            print(quality)
+            print(link)
+            
+
     if final_res:
         for note in final_res:
             inf = list(note.values())
             urlmovie = inf[3]
             rezka = HdRezkaApi(urlmovie)
+            keyboard = types.InlineKeyboardMarkup()
+            button_text = "Смотреть " + inf[0]
+            button_callback = urlmovie
+            button = types.InlineKeyboardButton(text=button_text, callback_data=button_callback)
+            keyboard.add(button)
+            bot.send_photo(message.chat.id, inf[2], f'{inf[1]}'.format(message.from_user, bot.get_me()),
+                           parse_mode='html', reply_markup=keyboard)
             if rezka.type == "video.tv_series":
                 seriesdata = rezka.getSeasons()
-                print( rezka.getTranslations() )
-                print(seriesdata)
                 list_button_name = seriesdata[None]['seasons']
-                print(list_button_name)
                 latest_season = max(seriesdata[None]['seasons'], key=int)
                 buttons = []
                 for item in list_button_name:
-                    button = types.InlineKeyboardButton(text=item, callback_data=item)
+                    button_text = f"Сезон {item}"
+                    button = types.InlineKeyboardButton(text=button_text, callback_data=item)
                     buttons.append(button)
                 keyboard = types.InlineKeyboardMarkup()
                 keyboard.add(*buttons)
                 bot.send_message(message.chat.id, f'В сериале {latest_season} сезонов'.format(message.from_user, bot.get_me()), reply_markup=keyboard)
 
-            finalurl = rezka.getStream('1', '1')('720p')
-            bot.send_photo(message.chat.id, inf[2], f'<b><a href="{finalurl}">{inf[0]}</a></b>\n{inf[1]}'.format(message.from_user, bot.get_me()),
-                           parse_mode='html')
-        if len(soup.find_all('div', class_='b-content__inline_item')) > 3:
-            bot.send_message(message.chat.id, f'<b><a href="{base+req}">БОЛЬШЕ РЕЗУЛЬТАТОВ ЗДЕСЬ</a></b>'.format(message.from_user, bot.get_me()),
-                            parse_mode='html')
     else:
         bot.send_message(message.chat.id, 'Ничего не найдено')
 
