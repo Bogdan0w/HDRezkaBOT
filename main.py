@@ -38,38 +38,37 @@ def search(message):
                              .find('div', class_='b-content__inline_item-cover')
                              .find('a').get('href')})
 
-    @bot.callback_query_handler(func=lambda call: True, prefix='Main')
+    @bot.callback_query_handler(func=lambda call: call.data.startswith('movieurl_'))
     def handle_callback(call):
-        if call.data == button_callback:
-            urlmovie = call.data
-            rezka = HdRezkaApi(urlmovie)        
-            if rezka.type == "video.tv_series":
-                if None in rezka.getTranslations():
-                    print("hello")
-                else:
-                    print("bye")
+        callbackdata = call.data.split('_')[1:]
+        urlmovie = ''.join(callbackdata)
+        rezka = HdRezkaApi(urlmovie)        
+        if rezka.type == "video.tv_series":
+            if None in rezka.getTranslations():
+                print("hello")
             else:
-                if None in rezka.getTranslations():
-                    stream = rezka.getStream(1, 5)
-                    links = stream.videos
-                    def globallinks():
-                        global links
-                        
-                    keyboard = types.InlineKeyboardMarkup()
-                    for quality, link in links.items():
-                        button = types.InlineKeyboardButton(text=quality, callback_data=quality)
-                        keyboard.add(button)
-                    bot.send_message(call.message.chat.id, 'Выберите качество видео:', reply_markup=keyboard)
-                    print(quality)
-                else:
-                    bot.send_message(call.message.chat.id, "Ошибка: Не удалось получить ссылку на видео.")
+                print("bye")
+        else:
+            if None in rezka.getTranslations():
+                stream = rezka.getStream(1, 5)
+                global links
+                links = stream.videos
+                keyboard = types.InlineKeyboardMarkup()           
+                for quality, link in links.items():
+                    button = types.InlineKeyboardButton(text=quality, callback_data='quality_' + quality)
+                    keyboard.add(button)
+                bot.send_message(call.message.chat.id, 'Выберите качество видео:', reply_markup=keyboard)
+            else:
+                bot.send_message(call.message.chat.id, "Ошибка: Не удалось получить ссылку на видео.")
                     
-        elif call.data == quality:
-            quality = call.data
-            link = globallinks()
-            print(quality)
-            print(link)
-            
+    @bot.callback_query_handler(func=lambda call: call.data.startswith('quality_'))
+    def handle_callback(call):
+        callbackdata = call.data.split('_')[1:]
+        quality = ''.join(callbackdata)
+        finalurl = links[quality]
+        print(finalurl)
+        bot.send_message(call.message.chat.id, finalurl)
+                    
 
     if final_res:
         for note in final_res:
@@ -79,22 +78,22 @@ def search(message):
             keyboard = types.InlineKeyboardMarkup()
             button_text = "Смотреть " + inf[0]
             button_callback = urlmovie
-            button = types.InlineKeyboardButton(text=button_text, callback_data=button_callback)
+            button = types.InlineKeyboardButton(text=button_text, callback_data='movieurl_' + button_callback)
             keyboard.add(button)
-            bot.send_photo(message.chat.id, inf[2], f'{inf[1]}'.format(message.from_user, bot.get_me()),
+            bot.send_photo(message.chat.id, inf[2], inf[1].format(message.from_user, bot.get_me()),
                            parse_mode='html', reply_markup=keyboard)
-            if rezka.type == "video.tv_series":
+            if rezka.type == "da":
                 seriesdata = rezka.getSeasons()
                 list_button_name = seriesdata[None]['seasons']
                 latest_season = max(seriesdata[None]['seasons'], key=int)
                 buttons = []
                 for item in list_button_name:
-                    button_text = f"Сезон {item}"
+                    button_text = {item}
                     button = types.InlineKeyboardButton(text=button_text, callback_data=item)
                     buttons.append(button)
                 keyboard = types.InlineKeyboardMarkup()
                 keyboard.add(*buttons)
-                bot.send_message(message.chat.id, f'В сериале {latest_season} сезонов'.format(message.from_user, bot.get_me()), reply_markup=keyboard)
+                bot.send_message(message.chat.id, 'В сериале' + latest_season + 'сезонов'.format(message.from_user, bot.get_me()), reply_markup=keyboard)
 
     else:
         bot.send_message(message.chat.id, 'Ничего не найдено')
