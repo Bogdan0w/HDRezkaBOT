@@ -57,7 +57,12 @@ def search(message):
                     keyboard.add(button)
                 bot.send_message(call.message.chat.id, 'Выберите сезон:', reply_markup=keyboard)
             else:
-                print("bye")
+                global seriestranslator
+                seriestranslator = rezka.translators
+                keyboard = types.InlineKeyboardMarkup() 
+                button = types.InlineKeyboardButton(text=ozvuchka, callback_data='ozvuchka_' + ozvuchka)
+                keyboard.add(button)
+                bot.send_message(call.message.chat.id, 'Выберите озвучку:', reply_markup=keyboard)
         else:
             if None in rezka.getTranslations():
                 stream = rezka.getStream(1, 5)
@@ -114,9 +119,7 @@ def search(message):
         callbackdata = call.data.split('_')[1:]
         episode = ''.join(callbackdata)
         rezka = HdRezkaApi(urlmovie)
-        episeason = f"{season}, {episode}"
-        print(episeason)
-        stream = rezka.getStream(season + "," + episode)
+        stream = rezka.getStream(season, episode)
         global links
         links = stream.videos
         keyboard = types.InlineKeyboardMarkup()
@@ -131,21 +134,19 @@ def search(message):
         quality = ''.join(callbackdata)
         finalurl = links[quality]
         print(finalurl)
-        bot.send_message(call.message.chat.id, finalurl)
+        bot.send_message(call.message.chat.id, finalurl, parse_mode='html')
                     
 
     if final_res:
         for note in final_res:
             inf = list(note.values())
             urlmovie = inf[3]
-            rezka = HdRezkaApi(urlmovie)
             keyboard = types.InlineKeyboardMarkup()
             button_text = "Смотреть " + inf[0]
             button_callback = urlmovie
             button = types.InlineKeyboardButton(text=button_text, callback_data='movieurl_' + button_callback)
             keyboard.add(button)
-            bot.send_photo(message.chat.id, inf[2], inf[1].format(message.from_user, bot.get_me()),
-                           parse_mode='html', reply_markup=keyboard)
+            bot.send_photo(message.chat.id, inf[2], inf[1], reply_markup=keyboard)
 
     else:
         bot.send_message(message.chat.id, 'Ничего не найдено')
